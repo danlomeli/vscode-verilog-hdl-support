@@ -11,16 +11,17 @@ export default class LintManager {
   private linter: BaseLinter;
   private diagnosticCollection: vscode.DiagnosticCollection;
   private logger: vscode.LogOutputChannel;
+  private isConfiged: boolean;
 
   constructor(logger: vscode.LogOutputChannel) {
     this.diagnosticCollection = vscode.languages.createDiagnosticCollection();
     this.logger = logger;
+    this.isConfiged = false;
     vscode.workspace.onDidOpenTextDocument(this.lint, this, this.subscriptions);
     vscode.workspace.onDidSaveTextDocument(this.lint, this, this.subscriptions);
     vscode.workspace.onDidCloseTextDocument(this.removeFileDiagnostics, this, this.subscriptions);
 
     vscode.workspace.onDidChangeConfiguration(this.configLinter, this, this.subscriptions);
-    this.configLinter();
 
     // Run linting for open documents on launch
     vscode.window.visibleTextEditors.forEach((editor) => {
@@ -56,11 +57,17 @@ export default class LintManager {
     if (this.linter != null) {
       this.logger.info('[lint-manager] Using linter ' + this.linter.name);
     }
+
+    this.isConfiged = true;
   }
 
   lint(doc: vscode.TextDocument) {
     // Check for language id
     let lang: string = doc.languageId;
+
+    if (!this.isConfiged) {
+      this.configLinter();
+    }
     if (this.linter != null && (lang === 'verilog' || lang === 'systemverilog')) {
       this.linter.startLint(doc);
     }
